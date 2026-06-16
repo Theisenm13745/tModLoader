@@ -1,0 +1,17 @@
+global using System;
+global using System.Collections.Generic;
+global using System.IO;
+global using System.Linq;
+global using ProgressionJournal.Data.Catalogs;
+global using ProgressionJournal.Data.Enums;
+global using ProgressionJournal.Data.Models;
+global using ProgressionJournal.Data.Profiles;
+global using ProgressionJournal.Data.Resolvers;
+global using ProgressionJournal.Data.Repositories;
+global using ProgressionJournal.UI.Composition;
+global using ProgressionJournal.UI.Controls;
+global using ProgressionJournal.UI.States;
+global using ProgressionJournal.UI.Utilities;
+global using ProgressionJournal.UI.Visuals.Elements;
+global using ProgressionJournal.UI.Visuals.Renderers;
+global using ProgressionJournal.UI.Visuals.Styles;

@@ -1,0 +1,234 @@
+using Terraria.GameContent;
+using Terraria.ID;
+using Terraria.Localization;
+using Terraria.UI;
+
+namespace ProgressionJournal.UI.Controls;
+
+public sealed class JournalCombatBuffPanel : JournalVolumetricPanel
+{
+    private readonly IReadOnlyList<JournalBuffCategory> _sectionOrder;
+    private readonly string _titleLocalizationKey;
+    private readonly bool _showTitle;
+    private readonly bool _autoHeight;
+    private readonly int _slotsPerRow;
+    private readonly Action<int>? _onItemSelected;
+    private readonly Action<JournalBuffCategory>? _onAddCategory;
+
+    public JournalCombatBuffPanel(
+        IReadOnlyList<JournalBuffCategory> sectionOrder,
+        string titleLocalizationKey,
+        bool showTitle = true,
+        bool autoHeight = false,
+        int slotsPerRow = JournalUiMetrics.BuffSlotsPerRow,
+        Action<int>? onItemSelected = null,
+        Action<JournalBuffCategory>? onAddCategory = null)
+    {
+        _sectionOrder = sectionOrder;
+        _titleLocalizationKey = titleLocalizationKey;
+        _showTitle = showTitle;
+        _autoHeight = autoHeight;
+        _slotsPerRow = Math.Max(1, slotsPerRow);
+        _onItemSelected = onItemSelected;
+        _onAddCategory = onAddCategory;
+        SetPadding(0f);
+        BackgroundColor = JournalUiTheme.PresetPanelBackground;
+        BorderColor = JournalUiTheme.PresetPanelBorder;
+    }
+
+    public bool HasEntries { get; private set; }
+
+    public float ContentHeight { get; private set; }
+
+    public void SetEntries(IReadOnlyList<JournalCombatBuffEntry> entries)
+    {
+        RemoveAllChildren();
+        HasEntries = entries.Count > 0 || _onAddCategory is not null;
+        ContentHeight = 0f;
+
+        if (!HasEntries)
+        {
+            if (_autoHeight)
+            {
+                Height.Set(0f, 0f);
+            }
+
+            return;
+        }
+
+        var top = JournalUiMetrics.BlockVerticalPadding;
+        const float contentLeft = JournalUiMetrics.BlockHorizontalPadding + JournalUiMetrics.CategoryContentIndent;
+
+        if (_showTitle)
+        {
+            var title = new JournalRecommendationHeader(
+                Language.GetTextValue(_titleLocalizationKey),
+                JournalUiTheme.PresetPanelBorder);
+            title.Left.Set(JournalUiMetrics.BlockHorizontalPadding, 0f);
+            title.Top.Set(top, 0f);
+            title.Width.Set(-(JournalUiMetrics.BlockHorizontalPadding * 2f), 1f);
+            title.Height.Set(JournalUiMetrics.RecommendationHeaderHeight, 0f);
+            Append(title);
+            top += JournalUiMetrics.RecommendationHeaderHeight + JournalUiMetrics.RecommendationHeaderBottomSpacing;
+        }
+
+        var hasAnyCategory = false;
+        foreach (var category in _sectionOrder)
+        {
+            var categoryEntries = entries.Where(entry => entry.Category == category).ToArray();
+            if (categoryEntries.Length == 0 && _onAddCategory is null)
+            {
+                continue;
+            }
+
+            if (hasAnyCategory)
+            {
+                top += JournalUiMetrics.BuffSectionSpacing;
+            }
+
+            var header = CreateCategoryHeader(category);
+            header.Left.Set(JournalUiMetrics.BlockHorizontalPadding, 0f);
+            header.Top.Set(top, 0f);
+            Append(header);
+
+            if (_onAddCategory is not null)
+            {
+                var capturedCategory = category;
+                var addButton = JournalUiElementFactory.CreateIconButton(
+                    TextureAssets.Item[GetCategoryIconItem(category)],
+                    30f,
+                    24f,
+                    () => _onAddCategory(capturedCategory),
+                    0.68f);
+                addButton.Left.Set(-JournalUiMetrics.BlockHorizontalPadding - 30f, 1f);
+                addButton.Top.Set(top - 2f, 0f);
+                addButton.SetHoverText(GetCategoryTitle(category));
+                Append(addButton);
+            }
+
+            top += GetCategoryHeaderHeight() + GetCategoryHeaderBottomSpacing();
+
+            foreach (var rowEntries in ChunkEntries(categoryEntries, _slotsPerRow))
+            {
+                var row = CreateSlotRow(rowEntries);
+                row.Left.Set(contentLeft, 0f);
+                row.Top.Set(top, 0f);
+                Append(row);
+                top += JournalUiMetrics.RowHeight + JournalUiMetrics.RowSpacing;
+            }
+
+            top -= JournalUiMetrics.RowSpacing;
+            hasAnyCategory = true;
+        }
+
+        if (_autoHeight)
+        {
+            Height.Set(top + 4f, 0f);
+        }
+
+        ContentHeight = top + 4f;
+    }
+    private static string GetCategoryTitle(JournalBuffCategory category) => category switch
+    {
+        JournalBuffCategory.Station => Language.GetTextValue("Mods.ProgressionJournal.UI.CombatBuffStations"),
+        JournalBuffCategory.Passive => Language.GetTextValue("Mods.ProgressionJournal.UI.CombatBuffPassive"),
+        JournalBuffCategory.Basic => Language.GetTextValue("Mods.ProgressionJournal.UI.CombatBuffBasic"),
+        JournalBuffCategory.Potion => Language.GetTextValue("Mods.ProgressionJournal.UI.CombatBuffPotions"),
+        JournalBuffCategory.Eternal => Language.GetTextValue("Mods.ProgressionJournal.UI.CombatBuffEternal"),
+        JournalBuffCategory.Food => Language.GetTextValue("Mods.ProgressionJournal.UI.CombatBuffFood"),
+        JournalBuffCategory.Flask => Language.GetTextValue("Mods.ProgressionJournal.UI.CombatBuffFlasks"),
+        _ => string.Empty
+    };
+
+    private static int GetCategoryIconItem(JournalBuffCategory category) => category switch
+    {
+        JournalBuffCategory.Station => ItemID.Campfire,
+        JournalBuffCategory.Passive => ItemID.HeartLantern,
+        JournalBuffCategory.Basic => ItemID.HealingPotion,
+        JournalBuffCategory.Potion => ItemID.IronskinPotion,
+        JournalBuffCategory.Eternal => ItemID.LifeCrystal,
+        JournalBuffCategory.Food => ItemID.ApplePie,
+        JournalBuffCategory.Flask => ItemID.FlaskofFire,
+        _ => ItemID.BottledWater
+    };
+
+    private static JournalCategoryHeader CreateCategoryHeader(JournalBuffCategory category)
+    {
+        var header = new JournalCategoryHeader(
+            GetCategoryTitle(category),
+            JournalUiTheme.PanelBorder,
+            JournalUiTheme.RootTitleText,
+            JournalUiTheme.CategoryHeaderStyle);
+        header.Width.Set(-(JournalUiMetrics.BlockHorizontalPadding * 2f), 1f);
+        header.Height.Set(GetCategoryHeaderHeight(), 0f);
+        return header;
+    }
+
+    private static IEnumerable<JournalCombatBuffEntry[]> ChunkEntries(IReadOnlyList<JournalCombatBuffEntry> entries, int maxSlotsPerRow)
+    {
+        var row = new List<JournalCombatBuffEntry>();
+        var occupiedSlots = 0;
+
+        foreach (var entry in entries)
+        {
+            var entrySlots = entry.ItemGroups.Count;
+
+            if (row.Count > 0 && occupiedSlots + entrySlots > maxSlotsPerRow)
+            {
+                yield return row.ToArray();
+                row.Clear();
+                occupiedSlots = 0;
+            }
+
+            row.Add(entry);
+            occupiedSlots += entrySlots;
+        }
+
+        if (row.Count > 0)
+        {
+            yield return row.ToArray();
+        }
+    }
+
+    private UIElement CreateSlotRow(IReadOnlyList<JournalCombatBuffEntry> entries)
+    {
+        var row = new UIElement();
+        row.Width.Set(GetRowWidth(entries), 0f);
+        row.Height.Set(JournalUiMetrics.RowHeight, 0f);
+
+        var left = 0f;
+        foreach (var entry in entries)
+        {
+            var slot = new JournalBuffSlot(entry, BorderColor, _onItemSelected);
+            slot.Left.Set(left, 0f);
+            row.Append(slot);
+            left += JournalBuffSlot.GetVisualWidth(entry) + JournalUiMetrics.EntrySpacing;
+        }
+
+        return row;
+    }
+
+    private static float GetRowWidth(IReadOnlyList<JournalCombatBuffEntry> entries)
+    {
+        if (entries.Count == 0)
+        {
+            return 0f;
+        }
+
+        return entries.Sum(JournalBuffSlot.GetVisualWidth)
+            + JournalUiMetrics.EntrySpacing * (entries.Count - 1);
+    }
+
+    private static float GetCategoryHeaderHeight() => JournalUiTheme.CategoryHeaderStyle switch
+    {
+        JournalCategoryHeaderStyle.AccentTag => 24f,
+        JournalCategoryHeaderStyle.SideRail => 22f,
+        _ => 20f
+    };
+
+    private static float GetCategoryHeaderBottomSpacing() => JournalUiTheme.CategoryHeaderStyle switch
+    {
+        JournalCategoryHeaderStyle.AccentTag => 7f,
+        _ => 6f
+    };
+}

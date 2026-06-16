@@ -1,0 +1,60 @@
+[h1]Progression Journal[/h1]
+
+[b]A client-side progression helper for Terraria/tModLoader.[/b]
+
+This mod adds an in-game journal with manually curated equipment recommendations for each class at every stage of progression.
+It is designed as a quick reference during gameplay, so you do not have to open the wiki every few minutes.
+
+[h2]Features[/h2]
+[list]
+[*]Equipment recommendations for melee, ranged, magic, and summoner at each progression stage
+[*]Separate rating tiers: strong, usable, weak, and very weak
+[*]Combat buffs page with stations, passives, potions, food, flasks, and permanent upgrades
+[*]Item acquisition panel: drops, shops, recipes, crafting stations, and conditions
+[*]Visual condition icons for events, moon phases, and other progression checks
+[*]Fully usable in-game through a dedicated journal interface
+[*]Custom build system with saving, import, and export support
+[*]Build sharing through JSON format or directly through the in-game chat
+[*]Support for items from other mods in custom builds
+[*]Search and filtering tools for easier build setup
+[*]Progression profiles with custom classes, stages, unlock conditions, and ratings
+[*]Profile import and export through JSON files
+[*]Bundled Calamity Wiki profile when Calamity is installed
+[/list]
+
+[h2]Build System[/h2]
+
+Starting with version [b]2.0.0[/b], the mod includes a full build system. You can now create your own custom character builds, adjust them to your playstyle, and share them directly with other players.
+
+[img]https://i.imgur.com/PV7pm66.gif[/img]
+
+The build system allows you to create your own custom character builds: choose equipment, accessories, weapons, consumables, and other elements for a specific class or playstyle.
+
+Builds can be shared in two ways:
+[list]
+[*]through JSON format for import and export;
+[*]directly through the in-game chat.
+[/list]
+
+Builds are attached to the active progression profile, class, and stage. Profiles can define modded classes such as Rogue and can be copied and edited in-game.
+
+[h2]Mod support[/h2]
+
+Progression Journal uses profiles instead of pretending that item statistics alone can determine balance.
+Built-in wiki profiles provide a neutral [i]From guide[/i] list, while players can copy them and assign their own tiers, stages, and boss unlock conditions.
+
+The Calamity profile is generated from the structured class setup pages on the official Calamity Wiki and is shown only while Calamity is installed. It is a snapshot of the guide, not a claim that every item in the mod has been objectively ranked.
+
+Other mods can provide profile JSON through the public API, and profiles can also be shared as files.
+
+[h2]Important[/h2]
+[list]
+[*]This is a [b]client-side[/b] mod
+[*]The server does not need to install it
+[*]It does not change vanilla progression balance; it works as a reference tool
+[*]Wiki and community profiles may be incomplete or become outdated after another mod updates
+[*]The profile author is responsible for balance and recommendation accuracy
+[/list]
+
+[h1]Links[/h1]
+[url=https://github.com/Astrazior/ProgressionJournal]GitHub[/url]

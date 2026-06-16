@@ -1,0 +1,981 @@
+using Microsoft.Xna.Framework;
+using ProgressionJournal.Systems;
+using Terraria.GameContent;
+using Terraria.GameContent.UI.Elements;
+using Terraria.ID;
+using Terraria.Localization;
+using Terraria.ModLoader;
+using Terraria.UI;
+
+namespace ProgressionJournal.UI.Composition;
+
+public static class JournalContentBuilder
+{
+    private const float SavedBuildPreviewWidth = 126f;
+    private const float SavedBuildPreviewHeight = 178f;
+
+    private static readonly JournalBuffCategory[] CombatBuffSectionOrder =
+    [
+        JournalBuffCategory.Station,
+        JournalBuffCategory.Passive,
+        JournalBuffCategory.Basic,
+        JournalBuffCategory.Potion,
+        JournalBuffCategory.Eternal,
+        JournalBuffCategory.Food,
+        JournalBuffCategory.Flask
+    ];
+
+    private static readonly RecommendationTier[] TierOrder =
+    [
+        RecommendationTier.Recommended,
+        RecommendationTier.Additional,
+        RecommendationTier.NotRecommended,
+        RecommendationTier.Useless,
+        RecommendationTier.FromGuide
+    ];
+
+    public static void PopulateEntries(
+        UIList entryList,
+        string profileId,
+        string stageId,
+        IReadOnlyList<JournalStageEntry> entries,
+        Action<int>? onItemSelected = null)
+    {
+        var wikiEntries = entries.Where(static entry => entry.IsWikiRecommendation).ToArray();
+        var newEntries = entries.Where(static entry => !entry.IsWikiRecommendation).ToArray();
+
+        foreach (var group in wikiEntries.GroupBy(
+                     static entry => entry.WikiRecommendation!.SourceName,
+                     StringComparer.OrdinalIgnoreCase))
+        {
+            var title = Language.GetTextValue("Mods.ProgressionJournal.UI.WikiRecommendationsBlock");
+            var hoverText = Language.GetTextValue(
+                "Mods.ProgressionJournal.UI.WikiRecommendationsTooltip",
+                group.Key);
+            var palette = JournalUiTheme.GetWikiRecommendationBlockStyle();
+            entryList.Add(CreateRecommendationBlock(
+                title,
+                group.ToArray(),
+                palette,
+                onItemSelected,
+                hoverText));
+        }
+
+        if (newEntries.Length == 0)
+        {
+            entryList.Add(CreateEmptyStateNotice(
+                Language.GetTextValue("Mods.ProgressionJournal.UI.NoNewEquipment")));
+            return;
+        }
+
+        foreach (var tier in TierOrder)
+        {
+            var tierEntries = GetEntriesForTier(newEntries, tier);
+            if (tierEntries.Length == 0)
+            {
+                continue;
+            }
+
+            var palette = JournalUiTheme.GetRecommendationBlockStyle(tier);
+            var title = tier == RecommendationTier.FromGuide
+                ? Language.GetTextValue("Mods.ProgressionJournal.UI.NewEquipmentBlock")
+                : GetTierTitle(tier);
+            entryList.Add(CreateRecommendationBlock(title, tierEntries, palette, onItemSelected));
+        }
+    }
+
+    public static void PopulateCombatBuffs(
+        UIList entryList,
+        string profileId,
+        IReadOnlyList<JournalCombatBuffEntry> combatBuffEntries,
+        Action<int>? onItemSelected = null)
+    {
+        if (combatBuffEntries.Count == 0)
+        {
+            return;
+        }
+
+        var titleLocalizationKey = string.Equals(
+            profileId,
+            JournalProfileIds.Vanilla,
+            StringComparison.OrdinalIgnoreCase)
+            ? "Mods.ProgressionJournal.UI.VanillaCombatBuffsTitle"
+            : "Mods.ProgressionJournal.UI.CombatBuffsTitle";
+        var buffPanel = new JournalCombatBuffPanel(
+            CombatBuffSectionOrder,
+            titleLocalizationKey,
+            showTitle: true,
+            autoHeight: true,
+            onItemSelected: onItemSelected);
+        buffPanel.Width.Set(0f, 1f);
+        buffPanel.SetEntries(combatBuffEntries);
+        entryList.Add(buffPanel);
+    }
+
+    public static UIPanel CreateEditableRecommendationBlock(
+        RecommendationTier tier,
+        IReadOnlyList<JournalStageEntry> entries,
+        Action<JournalItemCategory> onAddCategory,
+        Action<int> onItemSelected)
+    {
+        var palette = JournalUiTheme.GetRecommendationBlockStyle(tier);
+        var block = JournalUiElementFactory.CreatePanel();
+        block.Width.Set(0f, 1f);
+        block.SetPadding(0f);
+        block.BackgroundColor = palette.Background;
+        block.BorderColor = palette.Border;
+
+        var top = JournalUiMetrics.BlockVerticalPadding;
+        var header = CreateRecommendationHeader(GetTierTitle(tier), palette.Border);
+        header.Left.Set(JournalUiMetrics.BlockHorizontalPadding, 0f);
+        header.Top.Set(top, 0f);
+        block.Append(header);
+        top += JournalUiMetrics.RecommendationHeaderHeight + 4f;
+
+        const float buttonWidthPercent = 1f / 4f;
+        for (var index = 0; index < JournalOrdering.EntryCategories.Count; index++)
+        {
+            var category = JournalOrdering.EntryCategories[index];
+            var button = JournalUiElementFactory.CreateIconButton(
+                TextureAssets.Item[GetEditorCategoryIconItem(category)],
+                30f,
+                30f,
+                () => onAddCategory(category),
+                0.72f);
+            button.Left.Set(-15f, buttonWidthPercent * index + buttonWidthPercent * 0.5f);
+            button.Top.Set(top, 0f);
+            button.SetHoverText(
+                $"+ {Language.GetTextValue($"Mods.ProgressionJournal.Categories.{category}")}");
+            block.Append(button);
+        }
+
+        top += 38f;
+        var hasAnyCategory = false;
+        foreach (var category in JournalOrdering.EntryCategories)
+        {
+            var categoryEntries = entries.Where(entry => entry.Entry.Category == category).ToArray();
+            if (categoryEntries.Length == 0)
+            {
+                continue;
+            }
+
+            if (hasAnyCategory)
+            {
+                top += JournalUiMetrics.CategorySpacing;
+            }
+
+            var categoryHeader = CreateCategoryHeader(category);
+            categoryHeader.Left.Set(JournalUiMetrics.BlockHorizontalPadding, 0f);
+            categoryHeader.Top.Set(top, 0f);
+            block.Append(categoryHeader);
+            top += GetCategoryHeaderHeight() + GetCategoryHeaderBottomSpacing();
+
+            foreach (var rowEntries in ChunkEntries(categoryEntries, JournalUiMetrics.EntrySlotsPerRow))
+            {
+                var row = CreateSlotRow(rowEntries, onItemSelected, palette.Border);
+                row.Left.Set(JournalUiMetrics.BlockHorizontalPadding + JournalUiMetrics.CategoryContentIndent, 0f);
+                row.Top.Set(top, 0f);
+                block.Append(row);
+                top += JournalUiMetrics.RowHeight + JournalUiMetrics.RowSpacing;
+            }
+
+            top -= JournalUiMetrics.RowSpacing;
+            hasAnyCategory = true;
+        }
+
+        block.Height.Set(top + JournalUiMetrics.BlockVerticalPadding, 0f);
+        return block;
+    }
+
+    private static int GetEditorCategoryIconItem(JournalItemCategory category) => category switch
+    {
+        JournalItemCategory.Weapon => ItemID.WoodenSword,
+        JournalItemCategory.ClassSpecific => ItemID.FallenStar,
+        JournalItemCategory.Armor => ItemID.IronHelmet,
+        JournalItemCategory.Accessory => ItemID.Shackle,
+        JournalItemCategory.Buff => ItemID.IronskinPotion,
+        JournalItemCategory.Ammunition => ItemID.MusketBall,
+        JournalItemCategory.Support => ItemID.BewitchingTable,
+        _ => ItemID.Book
+    };
+
+    public static void PopulateBuildPlanner(
+        UIList entryList,
+        string profileId,
+        string stageId,
+        string classId,
+        Func<string, int> getSelectedItemId,
+        Action<string> onSlotClick)
+    {
+        var visualClass = JournalClassIds.ToLegacy(classId);
+        entryList.Add(CreateBuildEquipmentPanel(profileId, stageId, visualClass, getSelectedItemId, onSlotClick, JournalSystem.ClearBuildItem));
+        entryList.Add(CreateBuildConsumablesPanel(visualClass, getSelectedItemId, onSlotClick, JournalSystem.ClearBuildItem));
+    }
+
+    public static void PopulateSavedBuilds(
+        UIList entryList,
+        string profileId,
+        string stageId,
+        string classId,
+        IReadOnlyList<JournalSavedBuild> builds)
+    {
+        var visualClass = JournalClassIds.ToLegacy(classId);
+        foreach (var build in builds)
+        {
+            entryList.Add(CreateSavedBuildCard(build, profileId, stageId, visualClass, entryList));
+        }
+    }
+
+    private static string GetTierTitle(RecommendationTier tier) => tier switch
+    {
+        RecommendationTier.Recommended => Language.GetTextValue("Mods.ProgressionJournal.UI.RecommendedBlock"),
+        RecommendationTier.Additional => Language.GetTextValue("Mods.ProgressionJournal.UI.AdditionalBlock"),
+        RecommendationTier.NotRecommended => Language.GetTextValue("Mods.ProgressionJournal.UI.NotRecommendedBlock"),
+        RecommendationTier.Useless => Language.GetTextValue("Mods.ProgressionJournal.UI.UselessBlock"),
+        RecommendationTier.FromGuide => Language.GetTextValue("Mods.ProgressionJournal.UI.FromGuideBlock"),
+        _ => string.Empty
+    };
+
+    private static UIPanel CreateBuildEquipmentPanel(
+        string profileId,
+        string stageId,
+        CombatClass combatClass,
+        Func<string, int> getSelectedItemId,
+        Action<string> onSlotClick,
+        Action<string> onSlotRightClick)
+    {
+        var panel = JournalUiElementFactory.CreatePanel();
+        panel.Width.Set(0f, 1f);
+        panel.BackgroundColor = JournalUiTheme.PresetPanelBackground;
+        panel.BorderColor = JournalUiTheme.PresetPanelBorder;
+
+        var top = JournalUiMetrics.BlockVerticalPadding;
+
+        var title = new UIText(Language.GetTextValue("Mods.ProgressionJournal.UI.BuildEquipmentTitle"), JournalUiMetrics.BuildPanelHeaderScale, true)
+        {
+            TextColor = JournalUiTheme.SectionHeaderText
+        };
+        title.Left.Set(JournalUiMetrics.BlockHorizontalPadding, 0f);
+        title.Top.Set(top, 0f);
+        panel.Append(title);
+        top += 24f;
+
+        top += 12f;
+        top = AppendBuildHeader(panel, Language.GetTextValue("Mods.ProgressionJournal.UI.Weapons"), top);
+        top = AppendEquipmentRow(
+            panel,
+            combatClass,
+            [
+                JournalBuildPlannerCatalog.PrimaryWeaponSlotKey,
+                JournalBuildPlannerCatalog.SupportWeaponSlotKey,
+                JournalBuildPlannerCatalog.ClassSpecificSlotKey
+            ],
+            top,
+            getSelectedItemId,
+            onSlotClick,
+            onSlotRightClick);
+
+        var armorHeaderTop = top + 8f;
+        var armorHeader = CreateBuildSectionLabel(Language.GetTextValue("Mods.ProgressionJournal.UI.ArmorLabel"));
+        armorHeader.Left.Set(JournalUiMetrics.BlockHorizontalPadding, 0f);
+        armorHeader.Top.Set(armorHeaderTop, 0f);
+        panel.Append(armorHeader);
+
+        var accessoriesLabel = CreateBuildSectionLabel(Language.GetTextValue("Mods.ProgressionJournal.UI.Accessories"));
+        accessoriesLabel.Left.Set(JournalUiMetrics.BlockHorizontalPadding + JournalUiMetrics.BuildSlotSize * 2.4f, 0f);
+        accessoriesLabel.Top.Set(armorHeaderTop, 0f);
+        panel.Append(accessoriesLabel);
+
+        var armorBottom = AppendEquipmentColumn(
+            panel,
+            combatClass,
+            [
+                JournalBuildPlannerCatalog.ArmorHeadSlotKey,
+                JournalBuildPlannerCatalog.ArmorBodySlotKey,
+                JournalBuildPlannerCatalog.ArmorLegsSlotKey
+            ],
+            JournalUiMetrics.BlockHorizontalPadding,
+            armorHeaderTop + 26f,
+            getSelectedItemId,
+            onSlotClick,
+            onSlotRightClick);
+
+        var baseAccessorySlotCount = JournalBuildPlannerCatalog.GetAccessorySlotCount(profileId, stageId);
+        var accessoryGridHeight = AppendExpandableEquipmentGrid(
+            panel,
+            combatClass,
+            JournalBuildPlannerCatalog.GetAccessorySlotKey,
+            JournalBuildPlannerCatalog.MaxAccessorySlotCount,
+            baseAccessorySlotCount,
+            2,
+            JournalUiMetrics.BlockHorizontalPadding + JournalUiMetrics.BuildSlotSize * 2.4f,
+            armorHeaderTop + 26f,
+            getSelectedItemId,
+            onSlotClick,
+            onSlotRightClick,
+            Language.GetTextValue("Mods.ProgressionJournal.UI.BuildAddAccessorySlotTooltip"));
+
+        top = MathF.Max(armorBottom, armorHeaderTop + 26f + accessoryGridHeight);
+
+        panel.Height.Set(top + JournalUiMetrics.BlockVerticalPadding, 0f);
+        return panel;
+    }
+
+    private static UIPanel CreateBuildConsumablesPanel(
+        CombatClass combatClass,
+        Func<string, int> getSelectedItemId,
+        Action<string> onSlotClick,
+        Action<string> onSlotRightClick)
+    {
+        var panel = JournalUiElementFactory.CreatePanel();
+        panel.Width.Set(0f, 1f);
+        panel.BackgroundColor = JournalUiTheme.PresetPanelBackground;
+        panel.BorderColor = JournalUiTheme.PresetPanelBorder;
+
+        var top = JournalUiMetrics.BlockVerticalPadding;
+        var title = new UIText(Language.GetTextValue("Mods.ProgressionJournal.UI.BuildConsumablesTitle"), JournalUiMetrics.BuildPanelHeaderScale, true)
+        {
+            TextColor = JournalUiTheme.SectionHeaderText
+        };
+        title.Left.Set(JournalUiMetrics.BlockHorizontalPadding, 0f);
+        title.Top.Set(top, 0f);
+        panel.Append(title);
+        top += 24f;
+
+        top = AppendBuildHeader(panel, Language.GetTextValue("Mods.ProgressionJournal.UI.BuildSlotPotion"), top);
+        top += AppendExpandableEquipmentGrid(
+            panel,
+            combatClass,
+            JournalBuildPlannerCatalog.GetPotionSlotKey,
+            JournalBuildPlannerCatalog.PotionSlotCount,
+            minVisibleSlots: 1,
+            4,
+            JournalUiMetrics.BlockHorizontalPadding,
+            top,
+            getSelectedItemId,
+            onSlotClick,
+            onSlotRightClick,
+            Language.GetTextValue("Mods.ProgressionJournal.UI.BuildAddPotionSlotTooltip")) + 10f;
+
+        top = AppendBuildHeader(panel, Language.GetTextValue("Mods.ProgressionJournal.UI.BuildSlotFood"), top);
+        top += AppendExpandableEquipmentGrid(
+            panel,
+            combatClass,
+            JournalBuildPlannerCatalog.GetFoodSlotKey,
+            JournalBuildPlannerCatalog.FoodSlotCount,
+            minVisibleSlots: 1,
+            4,
+            JournalUiMetrics.BlockHorizontalPadding,
+            top,
+            getSelectedItemId,
+            onSlotClick,
+            onSlotRightClick,
+            Language.GetTextValue("Mods.ProgressionJournal.UI.BuildAddFoodAlternativeTooltip"));
+
+        panel.Height.Set(top + JournalUiMetrics.BlockVerticalPadding, 0f);
+        return panel;
+    }
+
+    private static float AppendBuildHeader(UIElement panel, string title, float top)
+    {
+        var header = CreateBuildSectionLabel(title);
+        header.Left.Set(JournalUiMetrics.BlockHorizontalPadding, 0f);
+        header.Top.Set(top, 0f);
+        header.Width.Set(-JournalUiMetrics.BlockHorizontalPadding * 2f, 1f);
+        panel.Append(header);
+        return top + 24f;
+    }
+
+    private static float AppendEquipmentRow(
+        UIElement panel,
+        CombatClass combatClass,
+        IReadOnlyList<string> slotKeys,
+        float top,
+        Func<string, int> getSelectedItemId,
+        Action<string> onSlotClick,
+        Action<string> onSlotRightClick)
+    {
+        var left = JournalUiMetrics.BlockHorizontalPadding;
+        foreach (var slotKey in slotKeys)
+        {
+            var slot = CreateBuildSlot(slotKey, combatClass, getSelectedItemId, onSlotClick, onSlotRightClick);
+            slot.Left.Set(left, 0f);
+            slot.Top.Set(top, 0f);
+            panel.Append(slot);
+            left += JournalUiMetrics.BuildSlotSize + JournalUiMetrics.BuildSlotGap;
+        }
+
+        return top + JournalUiMetrics.BuildSlotSize + JournalUiMetrics.BuildSlotGap;
+    }
+
+    private static float AppendEquipmentColumn(
+        UIElement panel,
+        CombatClass combatClass,
+        IReadOnlyList<string> slotKeys,
+        float left,
+        float top,
+        Func<string, int> getSelectedItemId,
+        Action<string> onSlotClick,
+        Action<string> onSlotRightClick)
+    {
+        foreach (var slotKey in slotKeys)
+        {
+            var slot = CreateBuildSlot(slotKey, combatClass, getSelectedItemId, onSlotClick, onSlotRightClick);
+            slot.Left.Set(left, 0f);
+            slot.Top.Set(top, 0f);
+            panel.Append(slot);
+            top += JournalUiMetrics.BuildSlotSize + JournalUiMetrics.BuildSlotGap;
+        }
+
+        return top;
+    }
+
+    private static float AppendExpandableEquipmentGrid(
+        UIElement panel,
+        CombatClass combatClass,
+        Func<int, string> getSlotKey,
+        int maxSlotCount,
+        int minVisibleSlots,
+        int columns,
+        float left,
+        float top,
+        Func<string, int> getSelectedItemId,
+        Action<string> onSlotClick,
+        Action<string> onSlotRightClick,
+        string addSlotHoverText)
+    {
+        var visibleSlotCount = GetVisibleExpandableSlotCount(getSlotKey, maxSlotCount, minVisibleSlots, getSelectedItemId);
+        var visualSlotCount = visibleSlotCount + (visibleSlotCount < maxSlotCount ? 1 : 0);
+
+        for (var index = 0; index < visibleSlotCount; index++)
+        {
+            var slotKey = getSlotKey(index + 1);
+            AppendGridElement(
+                panel,
+                CreateBuildSlot(slotKey, combatClass, getSelectedItemId, onSlotClick, onSlotRightClick),
+                index,
+                columns,
+                left,
+                top);
+        }
+
+        if (visibleSlotCount >= maxSlotCount) return GetGridHeight(visualSlotCount, columns);
+        var addSlotKey = getSlotKey(visibleSlotCount + 1);
+        AppendGridElement(
+            panel,
+            CreateBuildAddSlot(addSlotHoverText, () => onSlotClick(addSlotKey)),
+            visibleSlotCount,
+            columns,
+            left,
+            top);
+
+        return GetGridHeight(visualSlotCount, columns);
+    }
+
+    private static void AppendGridElement(UIElement panel, UIElement element, int index, int columns, float left, float top)
+    {
+        var column = index % columns;
+        var row = index / columns;
+        element.Left.Set(left + column * (JournalUiMetrics.BuildSlotSize + JournalUiMetrics.BuildSlotGap), 0f);
+        element.Top.Set(top + row * (JournalUiMetrics.BuildSlotSize + JournalUiMetrics.BuildSlotGap), 0f);
+        panel.Append(element);
+    }
+
+    private static int GetVisibleExpandableSlotCount(
+        Func<int, string> getSlotKey,
+        int maxSlotCount,
+        int minVisibleSlots,
+        Func<string, int> getSelectedItemId)
+    {
+        var visibleSlotCount = Math.Clamp(minVisibleSlots, 0, maxSlotCount);
+        for (var slotIndex = maxSlotCount; slotIndex > visibleSlotCount; slotIndex--)
+        {
+            if (getSelectedItemId(getSlotKey(slotIndex)) > ItemID.None)
+            {
+                return slotIndex;
+            }
+        }
+
+        return visibleSlotCount;
+    }
+
+    private static JournalBuildEquipmentSlot CreateBuildSlot(
+        string slotKey,
+        CombatClass combatClass,
+        Func<string, int> getSelectedItemId,
+        Action<string> onSlotClick,
+        Action<string> onSlotRightClick)
+    {
+        return new JournalBuildEquipmentSlot(
+            JournalBuildPlannerCatalog.GetSlotShortLabel(slotKey, combatClass),
+            JournalBuildPlannerCatalog.GetSlotDisplayName(slotKey, combatClass),
+            () => getSelectedItemId(slotKey),
+            () => onSlotClick(slotKey),
+            () => onSlotRightClick(slotKey));
+    }
+
+    private static JournalBuildEquipmentSlot CreateBuildAddSlot(string hoverText, Action onClick)
+    {
+        return new JournalBuildEquipmentSlot(
+            "+",
+            hoverText,
+            static () => ItemID.None,
+            onClick,
+            static () => { });
+    }
+
+    private static UIText CreateBuildSectionLabel(string text)
+    {
+        return new UIText(text, JournalUiMetrics.BuildSectionTitleScale, true)
+        {
+            TextColor = JournalUiTheme.RootTitleText
+        };
+    }
+
+    private static float GetGridHeight(int itemCount, int columns)
+    {
+        if (itemCount <= 0)
+        {
+            return 0f;
+        }
+
+        var rowCount = (int)Math.Ceiling(itemCount / (float)columns);
+        return rowCount * JournalUiMetrics.BuildSlotSize + (rowCount - 1) * JournalUiMetrics.BuildSlotGap;
+    }
+
+    private static UIPanel CreateSavedBuildCard(
+        JournalSavedBuild build,
+        string profileId,
+        string stageId,
+        CombatClass combatClass,
+        UIElement focusContainer)
+    {
+        var card = JournalUiElementFactory.CreatePanel();
+        card.SetPadding(0f);
+        card.Width.Set(0f, 1f);
+        var palette = JournalUiTheme.GetClassPalette(combatClass);
+        card.BackgroundColor = Color.Lerp(JournalUiTheme.PanelBackground, palette.Background, 0.48f);
+        card.BorderColor = Color.Lerp(JournalUiTheme.PanelBorder, palette.Border, 0.72f);
+
+        var top = JournalUiMetrics.BlockVerticalPadding;
+        const float titleScale = JournalUiMetrics.BuildPanelHeaderScale;
+        var title = new UIText(JournalTextUtilities.TrimToPixelWidth(build.Name, SavedBuildPreviewWidth, titleScale), titleScale, true)
+        {
+            TextColor = Color.Lerp(palette.Text, Color.White, 0.22f)
+        };
+        title.Left.Set(JournalUiMetrics.BlockHorizontalPadding, 0f);
+        title.Top.Set(top, 0f);
+        title.Width.Set(SavedBuildPreviewWidth, 0f);
+        card.Append(title);
+
+        AppendSavedBuildActions(card, build);
+        top += 34f;
+
+        var previewBottom = AppendSavedBuildCharacterPreview(card, build, profileId, stageId, top, palette, focusContainer);
+        var equipmentBottom = AppendSavedBuildEquipmentSummary(card, build, top);
+        var consumablesBottom = AppendSavedBuildConsumablesSummary(card, build, top);
+        top = MathF.Max(previewBottom, MathF.Max(equipmentBottom, consumablesBottom));
+
+        card.Height.Set(top + JournalUiMetrics.BlockVerticalPadding, 0f);
+        return card;
+    }
+
+    private static void AppendSavedBuildActions(UIElement card, JournalSavedBuild build)
+    {
+        var editButton = JournalBuildActionButton.CreateEdit(() => JournalSystem.EditSavedBuild(build));
+        editButton.Left.Set(-154f, 1f);
+        editButton.Top.Set(7f, 0f);
+        editButton.SetHoverText(Language.GetTextValue("Mods.ProgressionJournal.UI.BuildEditTooltip"));
+        card.Append(editButton);
+
+        var exportButton = JournalBuildActionButton.CreateExport(() => JournalSystem.ExportSavedBuild(build));
+        exportButton.Left.Set(-116f, 1f);
+        exportButton.Top.Set(7f, 0f);
+        exportButton.SetHoverText(Language.GetTextValue("Mods.ProgressionJournal.UI.BuildExportTooltip"));
+        card.Append(exportButton);
+
+        var favoriteButton = JournalBuildActionButton.CreateFavorite(
+            build.IsFavorite,
+            () => JournalSystem.ToggleSavedBuildFavorite(build));
+        favoriteButton.Left.Set(-78f, 1f);
+        favoriteButton.Top.Set(7f, 0f);
+        favoriteButton.SetHoverText(build.IsFavorite
+            ? Language.GetTextValue("Mods.ProgressionJournal.UI.BuildFavoriteActiveTooltip")
+            : Language.GetTextValue("Mods.ProgressionJournal.UI.BuildFavoriteTooltip"));
+        card.Append(favoriteButton);
+
+        var deleteButton = JournalBuildActionButton.CreateTrash(() => JournalSystem.DeleteSavedBuild(build));
+        deleteButton.Left.Set(-40f, 1f);
+        deleteButton.Top.Set(7f, 0f);
+        deleteButton.SetHoverText(Language.GetTextValue("Mods.ProgressionJournal.UI.BuildDeleteTooltip"));
+        card.Append(deleteButton);
+    }
+
+    private static float AppendSavedBuildCharacterPreview(
+        UIElement card,
+        JournalSavedBuild build,
+        string profileId,
+        string stageId,
+        float top,
+        JournalClassPalette palette,
+        UIElement focusContainer)
+    {
+        var previewPanel = JournalUiElementFactory.CreatePanel();
+        previewPanel.Left.Set(JournalUiMetrics.BlockHorizontalPadding, 0f);
+        previewPanel.Top.Set(top, 0f);
+        previewPanel.Width.Set(SavedBuildPreviewWidth, 0f);
+        previewPanel.Height.Set(SavedBuildPreviewHeight, 0f);
+        previewPanel.BackgroundColor = Color.Lerp(JournalUiTheme.RootBackground, palette.Background, 0.56f);
+        previewPanel.BorderColor = Color.Lerp(palette.Border, palette.Accent, 0.42f);
+        card.Append(previewPanel);
+
+        var characterPreview = new JournalSavedBuildCharacterPreview(
+            JournalPreviewPlayerFactory.CreateSavedBuildPreview(build, profileId, stageId),
+            () => GetSavedBuildShadeOpacity(card, focusContainer),
+            1.18f);
+        characterPreview.Width.Set(104f, 0f);
+        characterPreview.Height.Set(146f, 0f);
+        characterPreview.HAlign = 0.5f;
+        characterPreview.Top.Set(18f, 0f);
+        characterPreview.IgnoresMouseInteraction = true;
+        previewPanel.Append(characterPreview);
+
+        return top + SavedBuildPreviewHeight;
+    }
+
+    private static float GetSavedBuildShadeOpacity(UIElement card, UIElement focusContainer)
+    {
+        var cardDimensions = card.GetDimensions();
+        var focusDimensions = focusContainer.GetDimensions();
+        if (cardDimensions.Height <= 0f || focusDimensions.Height <= 0f)
+        {
+            return 1f;
+        }
+
+        var cardCenterY = cardDimensions.Y + cardDimensions.Height * 0.5f;
+        var focusCenterY = focusDimensions.Y + focusDimensions.Height * 0.5f;
+        var centerDistance = MathF.Abs(cardCenterY - focusCenterY);
+        var centerBand = cardDimensions.Height * 0.18f;
+        var fadeDistance = MathF.Max(140f, focusDimensions.Height * 0.38f);
+        var normalizedDistance = MathHelper.Clamp((centerDistance - centerBand) / fadeDistance, 0f, 1f);
+        return MathHelper.SmoothStep(0f, 1f, normalizedDistance);
+    }
+
+    private static float AppendSavedBuildEquipmentSummary(
+        UIElement card,
+        JournalSavedBuild build,
+        float top)
+    {
+        const float columnLeft = 164f;
+        const int maxSlotsPerRow = 5;
+
+        top = AppendSavedBuildSection(
+            card,
+            Language.GetTextValue("Mods.ProgressionJournal.UI.Weapons"),
+            GetSelectedItems(
+                build,
+                JournalBuildPlannerCatalog.PrimaryWeaponSlotKey,
+                JournalBuildPlannerCatalog.SupportWeaponSlotKey,
+                JournalBuildPlannerCatalog.ClassSpecificSlotKey),
+            columnLeft,
+            top,
+            maxSlotsPerRow);
+
+        top = AppendSavedBuildSection(
+            card,
+            Language.GetTextValue("Mods.ProgressionJournal.UI.ArmorLabel"),
+            GetSelectedItems(
+                build,
+                JournalBuildPlannerCatalog.ArmorHeadSlotKey,
+                JournalBuildPlannerCatalog.ArmorBodySlotKey,
+                JournalBuildPlannerCatalog.ArmorLegsSlotKey),
+            columnLeft,
+            top,
+            maxSlotsPerRow);
+
+        var accessoryItems = Enumerable.Range(1, JournalBuildPlannerCatalog.MaxAccessorySlotCount)
+            .Select(slotIndex => build.GetSelectedItemReference(JournalBuildPlannerCatalog.GetAccessorySlotKey(slotIndex)))
+            .Where(static itemReference => itemReference is not null)
+            .Select(static itemReference => itemReference!)
+            .ToArray();
+
+        return AppendSavedBuildSection(
+            card,
+            Language.GetTextValue("Mods.ProgressionJournal.UI.Accessories"),
+            accessoryItems,
+            columnLeft,
+            top,
+            maxSlotsPerRow);
+    }
+
+    private static float AppendSavedBuildConsumablesSummary(UIElement card, JournalSavedBuild build, float top)
+    {
+        const float columnLeft = 482f;
+        const int maxSlotsPerRow = 4;
+
+        var potionItems = Enumerable.Range(1, JournalBuildPlannerCatalog.PotionSlotCount)
+            .Select(slotIndex => build.GetSelectedItemReference(JournalBuildPlannerCatalog.GetPotionSlotKey(slotIndex)))
+            .Where(static itemReference => itemReference is not null)
+            .Select(static itemReference => itemReference!)
+            .ToArray();
+
+        var foodItems = Enumerable.Range(1, JournalBuildPlannerCatalog.FoodSlotCount)
+            .Select(slotIndex => build.GetSelectedItemReference(JournalBuildPlannerCatalog.GetFoodSlotKey(slotIndex)))
+            .Where(static itemReference => itemReference is not null)
+            .Select(static itemReference => itemReference!)
+            .ToArray();
+
+        top = AppendSavedBuildSection(
+            card,
+            Language.GetTextValue("Mods.ProgressionJournal.UI.BuildSlotPotion"),
+            potionItems,
+            columnLeft,
+            top,
+            maxSlotsPerRow);
+
+        return AppendSavedBuildSection(
+            card,
+            Language.GetTextValue("Mods.ProgressionJournal.UI.BuildSlotFood"),
+            foodItems,
+            columnLeft,
+            top,
+            maxSlotsPerRow);
+    }
+
+    private static float AppendSavedBuildSection(
+        UIElement card,
+        string title,
+        IReadOnlyList<JournalSavedBuildItemReference> itemReferences,
+        float left,
+        float top,
+        int maxSlotsPerRow)
+    {
+        if (itemReferences.Count == 0)
+        {
+            return top;
+        }
+
+        var titleElement = new UIText(title, JournalUiMetrics.BuildSectionTitleScale, true)
+        {
+            TextColor = JournalUiTheme.SectionHeaderText
+        };
+        titleElement.Left.Set(left, 0f);
+        titleElement.Top.Set(top, 0f);
+        card.Append(titleElement);
+        top += 22f;
+
+        for (var index = 0; index < itemReferences.Count; index += maxSlotsPerRow)
+        {
+            var rowItems = itemReferences
+                .Skip(index)
+                .Take(maxSlotsPerRow)
+                .ToArray();
+
+            var strip = new JournalItemStrip(rowItems);
+            strip.Left.Set(left, 0f);
+            strip.Top.Set(top, 0f);
+            card.Append(strip);
+            top += JournalUiMetrics.BuildSlotSize + 5f;
+        }
+
+        return top + 5f;
+    }
+
+    private static JournalSavedBuildItemReference[] GetSelectedItems(JournalSavedBuild build, params string[] slotKeys)
+    {
+        return slotKeys
+            .Select(build.GetSelectedItemReference)
+            .Where(static itemReference => itemReference is not null)
+            .Select(static itemReference => itemReference!)
+            .ToArray();
+    }
+
+    private static JournalStageEntry[] GetEntriesForTier(
+        IReadOnlyList<JournalStageEntry> entries,
+        RecommendationTier tier)
+    {
+        return entries
+            .Where(entry => entry.Evaluation.Tier == tier)
+            .Select((entry, index) => new { Entry = entry, OriginalIndex = index })
+            .OrderBy(value => JournalOrdering.GetCategoryOrder(value.Entry.Entry.Category))
+            .ThenBy(value => value.OriginalIndex)
+            .Select(value => value.Entry)
+            .ToArray();
+    }
+
+    private static UIElement CreateEmptyStateNotice(string text)
+    {
+        var container = new UIElement();
+        container.Width.Set(0f, 1f);
+        container.Height.Set(64f, 0f);
+
+        var label = new UIText(text, 0.72f)
+        {
+            HAlign = 0.5f,
+            VAlign = 0.5f,
+            TextColor = JournalUiTheme.ContentDescriptionText
+        };
+        container.Append(label);
+        return container;
+    }
+
+    private static UIPanel CreateRecommendationBlock(
+        string title,
+        IReadOnlyList<JournalStageEntry> entries,
+        JournalPanelStyle palette,
+        Action<int>? onItemSelected,
+        string? headerHoverText = null)
+    {
+        var block = JournalUiElementFactory.CreatePanel();
+        block.Width.Set(0f, 1f);
+        block.SetPadding(0f);
+        block.BackgroundColor = palette.Background;
+        block.BorderColor = palette.Border;
+
+        var top = JournalUiMetrics.BlockVerticalPadding;
+
+        var header = CreateRecommendationHeader(title, palette.Border, headerHoverText);
+        header.Left.Set(JournalUiMetrics.BlockHorizontalPadding, 0f);
+        header.Top.Set(top, 0f);
+        block.Append(header);
+        top += JournalUiMetrics.RecommendationHeaderHeight + JournalUiMetrics.RecommendationHeaderBottomSpacing;
+
+        var hasAnyCategory = false;
+        foreach (var category in JournalOrdering.EntryCategories)
+        {
+            var categoryEntries = entries.Where(entry => entry.Entry.Category == category).ToArray();
+            if (categoryEntries.Length == 0)
+            {
+                continue;
+            }
+
+            if (hasAnyCategory)
+            {
+                top += JournalUiMetrics.CategorySpacing;
+            }
+
+            var categoryHeader = CreateCategoryHeader(category);
+            categoryHeader.Left.Set(JournalUiMetrics.BlockHorizontalPadding, 0f);
+            categoryHeader.Top.Set(top, 0f);
+            block.Append(categoryHeader);
+            top += GetCategoryHeaderHeight() + GetCategoryHeaderBottomSpacing();
+
+            foreach (var rowEntries in ChunkEntries(categoryEntries, JournalUiMetrics.EntrySlotsPerRow))
+            {
+                var row = CreateSlotRow(rowEntries, onItemSelected, palette.Border);
+                row.Left.Set(JournalUiMetrics.BlockHorizontalPadding + JournalUiMetrics.CategoryContentIndent, 0f);
+                row.Top.Set(top, 0f);
+                block.Append(row);
+                top += JournalUiMetrics.RowHeight + JournalUiMetrics.RowSpacing;
+            }
+
+            hasAnyCategory = true;
+        }
+
+        if (hasAnyCategory && top >= JournalUiMetrics.RowSpacing)
+        {
+            top -= JournalUiMetrics.RowSpacing;
+        }
+
+        block.Height.Set(top + 4f, 0f);
+        return block;
+    }
+
+    private static IEnumerable<JournalStageEntry[]> ChunkEntries(IReadOnlyList<JournalStageEntry> entries, int maxSlotsPerRow)
+    {
+        var row = new List<JournalStageEntry>();
+        var occupiedSlots = 0;
+
+        foreach (var entry in entries)
+        {
+            var entrySlots = Math.Max(1, entry.Entry.ItemGroups.Count);
+
+            if (row.Count > 0 && occupiedSlots + entrySlots > maxSlotsPerRow)
+            {
+                yield return row.ToArray();
+                row.Clear();
+                occupiedSlots = 0;
+            }
+
+            row.Add(entry);
+            occupiedSlots += entrySlots;
+        }
+
+        if (row.Count > 0)
+        {
+            yield return row.ToArray();
+        }
+    }
+
+    private static JournalCategoryHeader CreateCategoryHeader(JournalItemCategory category)
+    {
+        var palette = JournalUiTheme.GetCategoryStyle(category);
+        var header = new JournalCategoryHeader(
+            Language.GetTextValue($"Mods.ProgressionJournal.Categories.{category}"),
+            palette.Border,
+            palette.Text,
+            JournalUiTheme.CategoryHeaderStyle);
+
+        header.Width.Set(-(JournalUiMetrics.BlockHorizontalPadding * 2f), 1f);
+        header.Height.Set(GetCategoryHeaderHeight(), 0f);
+        return header;
+    }
+
+    private static JournalRecommendationHeader CreateRecommendationHeader(
+        string title,
+        Color accentColor,
+        string? hoverText = null)
+    {
+        var header = new JournalRecommendationHeader(title, accentColor, hoverText);
+        header.Width.Set(-(JournalUiMetrics.BlockHorizontalPadding * 2f), 1f);
+        header.Height.Set(JournalUiMetrics.RecommendationHeaderHeight, 0f);
+        return header;
+    }
+
+    private static UIElement CreateSlotRow(
+        JournalStageEntry[] entries,
+        Action<int>? onItemSelected,
+        Color blockAccent)
+    {
+        var row = new UIElement();
+        row.Width.Set(GetRowWidth(entries), 0f);
+        row.Height.Set(JournalUiMetrics.RowHeight, 0f);
+
+        var left = 0f;
+        foreach (var entry in entries)
+        {
+            var slot = new JournalEntrySlot(entry, blockAccent, onItemSelected);
+            slot.Left.Set(left, 0f);
+            row.Append(slot);
+            left += JournalEntrySlot.GetVisualWidth(entry.Entry.ItemGroups.Count) + JournalUiMetrics.EntrySpacing;
+        }
+
+        return row;
+    }
+
+    private static float GetRowWidth(IReadOnlyList<JournalStageEntry> entries)
+    {
+        if (entries.Count == 0)
+        {
+            return 0f;
+        }
+
+        return entries.Sum(entry => JournalEntrySlot.GetVisualWidth(entry.Entry.ItemGroups.Count))
+            + JournalUiMetrics.EntrySpacing * (entries.Count - 1);
+    }
+
+    private static float GetCategoryHeaderHeight() => JournalUiTheme.CategoryHeaderStyle switch
+    {
+        JournalCategoryHeaderStyle.AccentTag => 24f,
+        JournalCategoryHeaderStyle.SideRail => 22f,
+        _ => 20f
+    };
+
+    private static float GetCategoryHeaderBottomSpacing() => JournalUiTheme.CategoryHeaderStyle switch
+    {
+        JournalCategoryHeaderStyle.AccentTag => 7f,
+        _ => 6f
+    };
+
+    private static JournalSystem JournalSystem => ModContent.GetInstance<JournalSystem>();
+}
