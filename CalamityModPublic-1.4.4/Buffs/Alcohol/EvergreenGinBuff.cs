@@ -1,0 +1,32 @@
+﻿using CalamityMod.DataStructures;
+using CalamityMod.Items.Potions.Alcohol;
+using Terraria;
+using Terraria.ModLoader;
+
+namespace CalamityMod.Buffs.Alcohol
+{
+    public class EvergreenGinBuff : ModBuff
+    {
+        public static DebuffData debuffData = new DebuffData()
+        {
+            AlcoholLevel = 1
+        };
+        public override void SetStaticDefaults()
+        {
+            Main.debuff[Type] = true;
+            Main.pvpBuff[Type] = true;
+            Main.buffNoSave[Type] = false;
+            Main.persistentBuff[Type] = true;
+        }
+
+        public override void Update(Player player, ref int buffIndex)
+        {
+            var cplayer = player.Calamity();
+            cplayer.evergreenGin = true;
+            cplayer.SicknessDebuffMultiplier += EvergreenGin.DebuffBoost;
+            cplayer.WaterDebuffMultiplier += EvergreenGin.DebuffBoost;
+            cplayer.ElectricDebuffMultiplier -= EvergreenGin.DebuffLoss;
+            cplayer.HeatDebuffMultiplier -= EvergreenGin.DebuffLoss;
+        }
+    }
+}

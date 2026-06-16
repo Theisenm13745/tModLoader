@@ -1,0 +1,17 @@
+Boss Checklist lets you view a checklist of all available bosses while playing so you can progress through them as you defeat them.
+
+Toggle the checklist with the hotkey assigned to it in the settings. Visit 'Settings->Controls->Keybindings' to check or set the current hotkey.
+
+If you would like a mod to be supported, please encourage the modder to add support to this mod.
+
+If you are a modder, check out this mod's Steam workshop page to learn how to register your bosses and more.
+
+Introducing the Boss Log, which enhances the traditional boss checklist experience with customization and features with configs.
+[i:903] Improved boss checklist
+[i:3619] View more information about bosses
+[i:3099] Set new records for the bosses you fight
+[i:2886] Boss loot and collectible checklists
+
+[i:890] Boss despawn messages display in chat
+[i:3084] Boss radar for bosses that are off-screen
+[i:893] Certain items like treasure bags appear on the map

@@ -1,0 +1,54 @@
+﻿using CalamityMod.Items.Weapons.Ranged;
+using CalamityMod.Projectiles.Melee;
+using Microsoft.Xna.Framework;
+using Terraria;
+using Terraria.ID;
+using Terraria.ModLoader;
+
+namespace CalamityMod.Items.Weapons.Melee
+{
+    public class Avalanche : ModItem, ILocalizedModType
+    {
+        public new string LocalizationCategory => "Items.Weapons.Melee";
+        public override void SetDefaults()
+        {
+            Item.width = 64;
+            Item.height = 64;
+            Item.damage = 75;
+            Item.DamageType = DamageClass.Melee;
+            Item.useAnimation = 35;
+            Item.useTime = 35;
+            Item.useTurn = true;
+            Item.useStyle = ItemUseStyleID.Swing;
+            Item.knockBack = 7.25f;
+            Item.UseSound = SoundID.Item1;
+            Item.autoReuse = true;
+            Item.value = CalamityGlobalItem.RarityPinkBuyPrice;
+            Item.rare = ItemRarityID.Pink;
+        }
+
+        public override void OnHitNPC(Player player, NPC target, NPC.HitInfo hit, int damageDone)
+        {
+            int type = ModContent.ProjectileType<IceBombFriendly>();
+            if (player.ownedProjectileCounts[type] < 16)
+            {
+                var source = player.GetSource_ItemUse(Item);
+                int bombDamage = player.CalcIntDamage<MeleeDamageClass>(Item.damage);
+                for (int k = 0; k < 4; k++)
+                {
+                    // ai0: projectile timer. ai1: target index. ai2: rotation offset based on ice bomb number.
+                    Projectile.NewProjectile(source, target.Center, Vector2.Zero, type, bombDamage, hit.Knockback * 0.5f, Main.myPlayer, 0f, target.whoAmI, k);
+                }
+            }
+        }
+
+        public override void MeleeEffects(Player player, Rectangle hitbox)
+        {
+            if (Main.rand.NextBool(3))
+            {
+                int iceDust = Dust.NewDust(new Vector2((float)hitbox.X, (float)hitbox.Y), hitbox.Width, hitbox.Height, DustID.IceRod, (float)(player.direction * 2), 0f, 150, default, 1.5f);
+                Main.dust[iceDust].velocity *= 0.2f;
+            }
+        }
+    }
+}

@@ -1,0 +1,42 @@
+﻿using Microsoft.Xna.Framework;
+using Terraria;
+using Terraria.ID;
+using Terraria.ModLoader;
+
+namespace CalamityMod.Projectiles.Summon
+{
+    public class PuffCloud : ModProjectile, ILocalizedModType
+    {
+        public new string LocalizationCategory => "Projectiles.Summon";
+        public override void SetStaticDefaults()
+        {
+            Main.projFrames[Type] = 7;
+            ProjectileID.Sets.MinionShot[Type] = true;
+        }
+
+        public override void SetDefaults()
+        {
+            Projectile.width = Projectile.height = 16;
+            Projectile.friendly = true;
+            Projectile.ignoreWater = true;
+            Projectile.penetrate = 1;
+            Projectile.tileCollide = false;
+            Projectile.DamageType = DamageClass.Summon;
+        }
+
+        public override void AI()
+        {
+            Lighting.AddLight(Projectile.Center, Color.Cyan.ToVector3());
+            Projectile.velocity *= 0.97f;
+            Projectile.rotation = Projectile.velocity.ToRotation() + MathHelper.PiOver2;
+
+            Projectile.frameCounter++;
+            if (Projectile.frameCounter % 4 == 3)
+            {
+                Projectile.frame++;
+                if (Projectile.frame >= Main.projFrames[Type])
+                    Projectile.Kill();
+            }
+        }
+    }
+}

@@ -1,0 +1,54 @@
+﻿using CalamityMod.Items.Materials;
+using Microsoft.Xna.Framework;
+using Terraria;
+using Terraria.ID;
+using Terraria.ModLoader;
+
+namespace CalamityMod.Items.Tools
+{
+    public class Gelpick : ModItem, ILocalizedModType
+    {
+        public new string LocalizationCategory => "Items.Tools";
+        public override void SetDefaults()
+        {
+            Item.width = 46;
+            Item.height = 48;
+            Item.damage = 19;
+            Item.knockBack = 2.5f;
+            Item.useTime = 9;
+            Item.useAnimation = 12;
+            Item.pick = 105;
+            Item.tileBoost += 1;
+
+            Item.DamageType = DamageClass.Melee;
+            Item.useStyle = ItemUseStyleID.Swing;
+            Item.value = CalamityGlobalItem.RarityLightRedBuyPrice;
+            Item.rare = ItemRarityID.LightRed;
+            Item.UseSound = SoundID.Item1;
+            Item.autoReuse = true;
+            Item.useTurn = true;
+        }
+
+        public override void AddRecipes()
+        {
+            CreateRecipe().
+                AddIngredient<PurifiedGel>(12).
+                AddIngredient<BlightedGel>(12).
+                AddTile(TileID.Solidifier).
+                Register();
+        }
+
+        public override void MeleeEffects(Player player, Rectangle hitbox)
+        {
+            if (Main.rand.NextBool(4))
+            {
+                int dust = Dust.NewDust(new Vector2(hitbox.X, hitbox.Y), hitbox.Width, hitbox.Height, DustID.PurificationPowder);
+            }
+        }
+
+        public override void OnHitNPC(Player player, NPC target, NPC.HitInfo hit, int damageDone)
+        {
+            target.AddBuff(BuffID.Slimed, 180);
+        }
+    }
+}

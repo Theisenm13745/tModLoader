@@ -1,0 +1,41 @@
+﻿using CalamityMod.Projectiles.Ranged;
+using Terraria;
+using Terraria.ID;
+using Terraria.ModLoader;
+
+namespace CalamityMod.Items.Ammo
+{
+    public class MarksmanRound : ModItem, ILocalizedModType
+    {
+        public new string LocalizationCategory => "Items.Ammo";
+        public override void SetStaticDefaults()
+        {
+            Item.ResearchUnlockCount = 99;
+        }
+
+        public override void SetDefaults()
+        {
+            Item.width = 12;
+            Item.height = 26;
+            Item.damage = 12;
+            Item.DamageType = DamageClass.Ranged;
+            Item.maxStack = Item.CommonMaxStack;
+            Item.consumable = true;
+            Item.knockBack = 2.25f;
+            Item.value = Item.sellPrice(copper: 10);
+            Item.rare = ItemRarityID.LightRed;
+            Item.shoot = ModContent.ProjectileType<MarksmanShot>();
+            Item.shootSpeed = 1f;
+            Item.ammo = AmmoID.Bullet;
+        }
+
+        public override void AddRecipes()
+        {
+            CreateRecipe(999).
+                AddIngredient(ItemID.GoldenBullet, 999).
+                AddIngredient(ItemID.GoldCoin).
+                AddTile(TileID.Anvils).
+                Register();
+        }
+    }
+}

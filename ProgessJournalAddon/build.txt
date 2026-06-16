@@ -1,0 +1,3 @@
+displayName = Progression Journal Thorium Addon
+author = theisenm13745
+version = 0.1

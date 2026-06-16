@@ -1,0 +1,132 @@
+GrantsSkill: Concede a habilidade:
+GrantsSkillsPlural: Concede as habilidades:
+KeybindMenu: Pressione {0} para vincular habilidades
+Unequipped: Desequipado! Não pode ser usado!
+Unbound: Desvinculado!
+BoundTo: Vinculado para {0}!
+
+SpecialDashEffect: {
+	DisplayName: Corrida de Abelha
+	Tooltip: Realize uma pequena corrida de abelha em direção ao cursor
+}
+
+BetsyDashEffect: {
+	DisplayName: Corrida de Bola de Fogo
+	Tooltip:
+		'''
+		Realize uma pequena corrida invencível de bola de fogo em direção ao cursor
+		Compartilha seu tempo de recarga com a Corrida de Abelha
+		'''
+}
+
+DiveEffect: {
+	DisplayName: Mergulho de Queda Rápida
+	Tooltip:
+		'''
+		Ative no ar para cair rapidamente
+		Ative apertando duas vezes PARA BAIXO caso não tenha um botão salvo em um slot de habilidade
+		'''
+}
+
+GoldKeyEffect: {
+	DisplayName: Casco Dourado
+	Tooltip:
+		'''
+		Se envolte em um casco dourado
+		Você não poderá se mover ou atacar, mas será imune a todos os danos
+		Pressione novamente para se soltar cedo
+		'''
+}
+
+ParryEffect: {
+	DisplayName: Defesa de Guarda
+	Tooltip:
+		'''
+		Segure para defender
+		Defenda pouco antes de ser atingido para aparar o golpe, diminuindo os danos
+		Aperte o botão direito caso não tenha um botão salvo em um slot de habilidade
+		'''
+}
+
+StardustEffect: {
+	DisplayName: Congelamento de Pó das Estrelas
+	Tooltip:
+		'''
+		Congela o tempo por alguns segundos
+		Enquanto o tempo está congelado, seus lacaios continurão atacando
+		'''
+}
+
+DebuffInstallKeyEffect: {
+	DisplayName: Instalar Efeitos Negativos
+	Tooltip: Se inflinja com efeitos negativos, causando efeitos diferentes dependendo do acessório
+}
+
+FrigidGemstoneKeyEffect: {
+	DisplayName: Feitiço Frígido
+	Tooltip:
+		'''
+		Invoca um bloco de gelo em seu cursor
+		Inflige queimadura de gelo no modo díficil
+		'''
+}
+
+BombKeyEffect: {
+	DisplayName: Bomba de Raspão
+	Tooltip:
+		'''
+		Precisa ser carregado aproximando-se de ataques
+		Congela quase todos os projéteis e inimigos
+		'''
+}
+
+BulbKeyEffect: {
+	DisplayName: Limpeza Mágica
+	Tooltip:
+		'''
+		Se cure de todos os efeitos negativos com tempo de recarga longo
+		Também dobra o dano dos efeitos negativos em inimigos próximos
+		O tempo de recarga passa mais rápido ao não atacar
+		'''
+}
+
+AmmoCycleEffect: {
+	DisplayName: Ciclar munição
+	Tooltip: Cicla suas munições (Funciona passivamente do inventário e visual)
+}
+
+GladiatorBanner: {
+	DisplayName: Bandeira do Gladiador
+	Tooltip:
+		'''
+		Posiciona uma bandeira fortalecedora que dura 15 segundos
+		Ficar próximo à bandeira concede imunidade a recuos, 8% de redução de danos e 8% de aumento de dano
+		A bandeira só pode ser reposicionada após ela acabar
+		'''
+}
+
+PalmwoodEffect: {
+	DisplayName: Sentinela de Palmeira
+	Tooltip: Posicione uma sentinela de palmeira que lança nozes nos inimigos
+}
+
+ForbiddenEffect: {
+	DisplayName: Tempestade Proíbida
+	Tooltip:
+		'''
+		Chama uma tempestade anciã para a localizaçaõ do seu cursor, que causa danos de magia e invocação
+		Quaisquer projéteis atirados pela sua tempestade causarão 1.2x dano
+		Encoste nela para recarregar seu tempo de voo
+		A tempestade pode ser reinvocada após encostar no chão
+		'''
+}
+
+SpiritTornadoEffect: {
+	DisplayName: Tornado Espiritual
+	Tooltip:
+		'''
+		Chama um tornado ancião que causa dano de magia e invocação
+		Quaisquer projéteis atirados pelo tornado causam 1.4x dano
+		O tornado segue seu cursor levemente
+		'''
+}

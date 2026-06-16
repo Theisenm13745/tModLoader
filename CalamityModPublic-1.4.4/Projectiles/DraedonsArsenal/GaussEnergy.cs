@@ -1,0 +1,31 @@
+﻿using Terraria;
+using Terraria.ID;
+using Terraria.ModLoader;
+
+namespace CalamityMod.Projectiles.DraedonsArsenal
+{
+    public class GaussEnergy : ModProjectile, ILocalizedModType
+    {
+        public new string LocalizationCategory => "Projectiles.Misc";
+        public override string Texture => "CalamityMod/Projectiles/InvisibleProj";
+
+        public override void SetDefaults()
+        {
+            Projectile.width = 12;
+            Projectile.height = 12;
+            Projectile.friendly = true;
+            Projectile.DamageType = DamageClass.Melee;
+            Projectile.penetrate = 1;
+            Projectile.timeLeft = 240;
+        }
+        public override void AI()
+        {
+            for (int i = 0; i < 2; i++)
+            {
+                Dust dust = Dust.NewDustPerfect(Projectile.Center + Main.rand.NextVector2Circular(4f, 4f), DustID.Terra);
+                dust.scale = Main.rand.NextFloat(1.1f, 1.3f);
+                dust.noGravity = true;
+            }
+        }
+    }
+}

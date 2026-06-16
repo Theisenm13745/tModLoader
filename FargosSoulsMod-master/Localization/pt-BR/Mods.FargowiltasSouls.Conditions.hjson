@@ -1,0 +1,16 @@
+// Conditions (used in recipes, NPC shop, etc)
+RoombaPetSold: Quando a configuração da Roomba está ligada
+// ItemDropRuleConditions (used in NPC loot, etc)
+DownedEvilBoss: Após um chefe maligno ser derrotado
+EMode: "[i:FargowiltasSouls/Masochist] Taxa de queda no Modo Eternidade"
+EModeEarlyBirdHM: "[i:FargowiltasSouls/Masochist] Taxa de queda no Modo Eternidade no Modo díficil"
+EModeEarlyBirdPHM: "[i:FargowiltasSouls/Masochist] Taxa de queda no Modo Eternidade no Pré-Modo díficil"
+EModeNotMaster: Isso é uma taxa de queda do Modo Eternidade/Masoquista
+NotEMode: "[i:FargowiltasSouls/Masochist] Taxa de queda fora do Modo Eternidade"
+TimsConcoction: "[i:FargowiltasSouls/TimsConcoction] Taxa de queda da Mistura do Tim"
+Patreon: "[i:FargowiltasSouls/RoombaPet] Item do Patreon"
+PatreonEMode: "[i:FargowiltasSouls/RoombaPet] Item do Patreon no Modo Eternidade"
+PatreonPlant: "[i:FargowiltasSouls/RoombaPet] Item do Patreon na Selva durante a Lua de sangue"
+FirstKill: Obtido no Modo Eternidade ao matar pela primeira vez
+DownedCursedCoffin: Depois de derrotar o Cursed Coffin
+PostEvilEternity: Modo Eternidade: Após um chefe maligno ser derrotado

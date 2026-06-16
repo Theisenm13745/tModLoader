@@ -1,0 +1,88 @@
+SoulTogglerButton: Habilitador de Efeitos
+Standard: Modo Normal
+Eternity: Modo Eternidade
+Masochist: Modo Masoquista
+EternityEnabled: Modo Eternidade está ativado
+MasochistEnabled: Modo Masoquista está ativado
+EternityDisabled: Modo Eternidade está desativado
+LeftClickEnable: Botão esquerdo para ativar
+RightClickSelectDifficulty: Botão direito para selecionar a dificuldade
+HoldShift: Segure Shift para ler sobre
+Close: Fechar
+OpenKeybinds: Abrir botões vínculados
+
+TitleLinks: {
+	// Patreon: Patreon
+	// Github: Github
+}
+
+ExpandedStandard:
+	'''
+	Desabilita os modos Masoquista e Eternidade.
+	Dificuldade do mundo (perito, mestre) não muda.
+	'''
+ExpandedEternity:
+	'''
+	[c/00FFFF:Um novo modo acima do perito para veteranos do Terraria. A experiência pretendida do Fargo's]
+	Mundo deve estar no Modo perito
+	Habilita o Modo Masoquista caso o mundo esteja na dificuldade mestre ou superior 
+	'''
+ExpandedMasochist:
+	'''
+	[c/33ffbe:Um desafio bônus extremamente intenso. É altamente recomendado que jogue o Modo Eternidade primeiro!]
+	Mundo deve estar na dificuldade mestre ou superior
+	Habilita o Modo Eternidade caso o mundo esteja na dificuldade perito
+	'''
+EternityOption:
+	'''
+	[c/00FFFF:Um novo modo acima do perito para veteranos do Terraria. A experiência pretendida do Fargo's.]
+	Coloca a dificuldade do mundo no Modo Perito
+	'''
+MasochistOption:
+	'''
+	[c/33ffbe:Um desafio bônus extremamente intenso. É altamente recomendado que jogue o Modo Eternidade primeiro!]
+	Coloca a dificuldade do mundo no Modo Mestre
+	'''
+ExpandedFeatures:
+	'''
+	Características do Modo Eternidade incluem:
+
+	-Retrabalha chefes e inimigos, os tornando mais poderosos
+	-Habilita itens do Modo Mestre
+	-Novos itens exclusivos ao Modo Eternidade
+	-Deviantt providencia um kit de iniciante e dicas baseadas em sua progressão
+	-Melhora as estatistícas básicas e limita a redução de danos do jogador para 75%
+	-Efeitos negativos acabam mais rapidamente quando você não ataca, efeitos negativos não podem te matar exceto no Modo Masoquista 
+	-Muda a funcionalidade e a força de certos itens
+	'''
+MasochistMultiplayer: -No Masoquista multiplayer, cada jogador pode reviver apenas uma vez por luta
+SavedToSlot: Habilitações salvas para o conjunto personalizado {0}!
+NoTogglesFound: Nenhuma habilitação encontrada no conjunto {0}.
+TurnAllTogglesOff: Desligar todas as habilitações
+TurnAllTogglesOn: Ligar todas as habilitações
+SomeEffectsPreset: Conjunto de alguns efeitos
+MinimalEffectsPreset: Conjunto de efeitos mínimos
+CustomPreset: Conjunto personalizado {0} (botão direito para salvar)
+// Reload button is currently removed
+ReloadToggles: Recarregar habilitações (Botão direito para resetar)
+NoToggles: Nenhum efeito equipado para habilitar!
+DisplayAll: Mostrar todos
+DisplayEquipped: Mostrar equipados
+SearchText: Procurar...
+MainMenu: Fargo's
+DisabledUnequipped: Desabilitado: Não equipado
+ActiveSkills: Habilidades ativas
+AvailableSkills: Habilidades disponíveis
+SelectDifficulty: Selecionar dificuldade
+NoRespawn: Renascimento impedido: Apenas um renascimento permitido no Modo Masoquista Multiplayer!
+/* NoDLC:
+	'''
+	WARNING: You are playing Fargo's Souls Mod with the Calamity Mod without the compatibility mod!
+	We highly recommend you to install the "Calamity - Fargo's Souls DLC" mod for compatibility between these mods before proceeding!
+	The DLC mod also adds new content and optional Eternity reworks for Calamity bosses!
+	''' */
+/* NoMusic:
+	'''
+	WARNING: Fargo's Music Mod not found!
+	Please install Fargo's Music Mod for the full experience!
+	''' */
